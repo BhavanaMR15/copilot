@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LiveBench Copilot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: black;
+      overflow: hidden;
+    }
+
+    #ui-background {
+      background: url('UI.png') no-repeat center top;
+      background-size: contain;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    [data-tour] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+    }
+
+    /* Responsive position anchors */
+    [data-tour="plug"]      { top: 3.5%; left: 87%; }
+    [data-tour="menu"]      { top: 3.5%; left: 2.5%; }
+    [data-tour="features"]  { top: 18%; left: 3%; }
+    [data-tour="set"]       { top: 45%; left: 6%; }
+    [data-tour="graph"]     { top: 32%; left: 40%; }
+    [data-tour="progress"]  { top: 32%; left: 73%; }
+
+    #copilot {
+      position: absolute;
+      width: 80px;
+      z-index: 10;
+      transition: all 0.6s ease;
+    }
+
+    #copilot img {
+      width: 100%;
+      border-radius: 50%;
+      border: 2px solid #fff;
+    }
+
+    #chatbubble {
+      position: absolute;
+      max-width: 280px;
+      background: #0d0153;
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      z-index: 20;
+      box-shadow: 0 0 16px rgba(0,0,0,0.5);
+    }
+
+    #chatbubble::before {
+      display: none;
+    }
+
+
+    #chatbubble button {
+      margin-top: 10px;
+      background: white;
+      color: #0d0153;
+      border: none;
+      font-weight: bold;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui-background">
+    <!-- Reference anchors -->
+    <div data-tour="plug"></div>
+    <div data-tour="menu"></div>
+    <div data-tour="features"></div>
+    <div data-tour="set"></div>
+    <div data-tour="graph"></div>
+    <div data-tour="progress"></div>
+
+    <!-- Copilot Bot -->
+    <div id="copilot">
+      <img src="cop.jpg" alt="Copilot Bot" />
+    </div>
+
+    <!-- Chat Bubble -->
+    <div id="chatbubble">
+      👋 Hi! I'm your Copilot. Ready for a quick tour?
+      <br>
+      <button onclick="nextStep()">Next ▶</button>
+      <button onclick="endTour()">Skip ✖</button>
+    </div>
+  </div>
+
+  <script>
+    const messages = [
+      "This is where you’ll see the 'PLUGGED IN' status when the system is ready.",
+      "This is the Hamburger menu with options like Evaluate and User Manual.",
+      "On the left, you’ll find Features like DC Sweep, Thermal, and Hysteresis tests.",
+      "You can set sweep start and end values here before running the test.",
+      "The center area shows Sweep and Accuracy graphs in real time.",
+      "On the right is the Progress Log and result graphs.",
+      "Its that simple!! You’re ready to explore LiveBench yourself now!"
+    ];
+
+    const anchors = [
+      "plug", "menu", "features", "set", "graph", "progress", null
+    ];
+
+    let current = 0;
+
+    function speak(text) {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function nextStep() {
+      const chat = document.getElementById('chatbubble');
+      const copilot = document.getElementById('copilot');
+
+      if (current < messages.length) {
+        const anchor = anchors[current];
+        let x = window.innerWidth / 2 - 150;
+        let y = window.innerHeight / 2 - 100;
+
+        if (anchor) {
+          const el = document.querySelector(`[data-tour="${anchor}"]`);
+          const r = el.getBoundingClientRect();
+          x = r.left;
+          y = r.top;
+        }
+
+        copilot.style.left = x + 'px';
+        copilot.style.top = (y + 30) + 'px';
+
+        const bubbleX = (x + 300 > window.innerWidth) ? x - 280 : x + 90;
+        const bubbleY = y + 30;
+
+        chat.style.left = bubbleX + 'px';
+        chat.style.top = bubbleY + 'px';
+        chat.style.transform = 'none';
+
+        chat.innerHTML = `
+          ${messages[current]}<br>
+          <button onclick="nextStep()">Next ▶</button>
+          <button onclick="endTour()">Skip ✖</button>
+        `;
+
+        speak(messages[current]);
+        current++;
+      } else {
+        endTour(true);
+      }
+    }
+
+    function endTour(finished = false) {
+      const chat = document.getElementById('chatbubble');
+      const copilot = document.getElementById('copilot');
+
+      if (finished) {
+        const msg = "Tour complete! Thanks for exploring!";
+        chat.innerHTML = `
+          ${msg}<br><br>
+          <button onclick="dismissCopilot()">Close ✖</button>
+        `;
+        chat.style.left = '50%';
+        chat.style.top = '50%';
+        chat.style.transform = 'translate(-50%, -50%)';
+        copilot.style.left = 'calc(50% - 40px)';
+        copilot.style.top = 'calc(50% + 40px)';
+        speak(msg);
+      } else {
+        dismissCopilot();
+      }
+    }
+
+    function dismissCopilot() {
+      document.getElementById('chatbubble').style.display = 'none';
+      document.getElementById('copilot').style.display = 'none';
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+    }
+
+    window.onload = () => {
+      const chat = document.getElementById('chatbubble');
+      const copilot = document.getElementById('copilot');
+      chat.style.left = '52%';
+      chat.style.top = '50%';
+      chat.style.transform = 'translate(-50%, -50%)';
+      copilot.style.left = 'calc(50% - 180px)';
+      copilot.style.top = 'calc(45% + 20px)';
+    };
+
+  </script>
+</body>
+</html>
